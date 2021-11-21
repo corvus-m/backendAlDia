@@ -8,10 +8,10 @@ const checkDateValidity = (
   year: string
 ): boolean => {
   const date = new Date(`${month} ${day}, ${year}`);
-  return date.toString() !== "Invalid Date";
+  return date.toString() !== "Invalid Date"; 
 };
 
-const checkDateFuture = (
+const checkDateFuture = ( //filtro para comparar fechas futuras
   day: string,
   month: string,
   year: string
@@ -20,7 +20,7 @@ const checkDateFuture = (
   const actual_day = date.getDate();
   const actual_month = date.getMonth() + 1;
   const actual_year = date.getFullYear();
-  //console.log(`${actual_day}-${actual_month}-${actual_year}`);
+  
   //return (parseInt(day) >= actual_day && parseInt(month) >= actual_month && parseInt(year) >= actual_year );
   if( parseInt(year) > actual_year ) return true;
   
@@ -49,7 +49,7 @@ export const freeSeats = async (req: Request, res: Response) => {
   const collection = db.collection("reservas");
 
   if (!req.query) {
-    return res.status(500).send("No params");
+    return res.status(500).send("No hay parametros");
   }
 
   const { day, month, year } = req.query as {
@@ -59,11 +59,11 @@ export const freeSeats = async (req: Request, res: Response) => {
   }; //tipo: 20 12 2021
 
   if (!day || !month || !year) {
-    return res.status(500).send("Missing day, month or year");
+    return res.status(500).send("Falta day, month o year");
   }
 
   if (!checkDateValidity(day, month, year)) {
-    return res.status(500).send("Invalid day, month or year");
+    return res.status(500).send("Day, month o year invalidos");
   }
 
   const seats = await collection.find({ day, month, year }).toArray();
@@ -87,7 +87,7 @@ export const book = async (req: Request, res: Response) => {
   const db: Db = req.app.get("db");
   const collection = db.collection("reservas");
   if (!req.query) {
-    return res.status(500).send("No params");
+    return res.status(500).send("No hay parametros");
   }
 
   const { day, month, year, number } = req.query as {
@@ -98,17 +98,17 @@ export const book = async (req: Request, res: Response) => {
   };
 
   if (!day || !month || !year || !number) {
-    return res.status(500).send("Missing day, month or year or seat number");
+    return res.status(500).send("Falta day, month o year");
   }
 
   if (!checkDateValidity(day, month, year)) {
-    return res.status(500).send("Invalid day, month or year");
+    return res.status(500).send("Day, month o year invalidos");
   }
 
   
   const notFree = await collection.findOne({ day, month, year, number });
   if (notFree) { //si encuentra - esta reservado
-    return res.status(404).send("Seat is not free");
+    return res.status(404).send("Este puesto ya esta reservado.");
   }
   
   const token_usu = req.headers.token;
@@ -129,11 +129,11 @@ export const book = async (req: Request, res: Response) => {
 export const free = async (req: Request, res: Response) => {
   const db: Db = req.app.get("db");
   const collection = db.collection("reservas");
-  if (!req.query) { //cambiar a body
-    return res.status(500).send("No params");
+  if (!req.body) { 
+    return res.status(500).send("No hay parametros");
   }
 
-  const { day, month, year } = req.query as {
+  const { day, month, year } = req.body as {
     day: string;
     month: string;
     year: string;
@@ -147,21 +147,20 @@ export const free = async (req: Request, res: Response) => {
 
   if (!day || !month || !year || !token) {
     return res
-      .status(500)
-      .send("Missing day, month or year or seat number or token");
+      .status(500).send("Falta day, month o year");
   }
 
   if (!checkDateValidity(day, month, year)) {
-    return res.status(500).send("Invalid day, month or year");
+    return res.status(500).send("Day, month o year invalidos");
   }
 
   const booked = await collection.findOne({ day, month, year, email });
   if (booked) {
     await collection.deleteOne({ day, month, year, email });
-    return res.status(200).send("Seat is now free");
+    return res.status(200).send("Reserva cancelada");
   }
 
-  return res.status(500).send("Seat is not booked");
+  return res.status(500).send("No existe ninguna reserva este dia");
 };
 
 
@@ -173,7 +172,7 @@ export const signin = async (req: Request, res: Response) => {
     const db: Db = req.app.get("db");
     const collection = db.collection("usuarios");
     
-    const { email, password } = req.query as {
+    const { email, password } = req.body as {
       email: string;
       password: string;
     };
@@ -192,6 +191,7 @@ export const signin = async (req: Request, res: Response) => {
   };
 
 
+
   export const logout = async (req: Request, res: Response) => {
       const db: Db = req.app.get("db");
       const collection = db.collection("usuarios");
@@ -208,15 +208,13 @@ export const signin = async (req: Request, res: Response) => {
   //     ...
   //  )
 
+  
 
   export const login = async (req: Request, res: Response) => {
     const db: Db = req.app.get("db");
     const collection = db.collection("usuarios");
-    if (!req.query) {                       //cambiar a body
-      return res.status(500).send("No params");
-    }
-  
-    const { email, password } = req.query as {
+
+    const { email, password } = req.body as {
       email: string;
       password: string;
     };
@@ -262,29 +260,5 @@ export const signin = async (req: Request, res: Response) => {
     return res.status(200).json({ reserved }); //array con los puestos libres
   };
 
-    // if (!checkDateFuture(day, month, year)){
-    //   return res.status(500).send("Invalid day, month or year");
-    // }
-
-
-  // export const status = async (req: Request, res: Response) => {
-  //   const date = new Date();
-  //   const day = date.getDate();
-  //   const month = date.getMonth() + 1;
-  //   const year = date.getFullYear();
-  
-  //   res.status(200).send(`${day}-${month}-${year}`);
-  // };
-
-  // const checkDateFuture = (
-  //   day: string,
-  //   month: string,
-  //   year: string
-  // ): boolean => {
-  //   const date = new Date();
-  //   const actual_day = date.getDate();
-  //   const actual_month = date.getMonth() + 1;
-  //   const actual_year = date.getFullYear();
-  //   return (parseInt(day) >= actual_day || parseInt(month) >= actual_month || parseInt(year) >= actual_year )
-  // };
+    
   

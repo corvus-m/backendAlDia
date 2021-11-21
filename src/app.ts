@@ -6,6 +6,8 @@ import { book, free, freeSeats, status, signin, logout, login, mybookings } from
 const run = async () => {
   const db: Db = await connectDB();
   const app = express();
+  app.use(express.urlencoded({extended: true}));
+    app.use(express.json())
 
 
   var pruebasesion = {
@@ -46,17 +48,17 @@ const run = async () => {
 
     const db: Db = req.app.get("db");
     const collection = db.collection("usuarios");
-    if (!req.query) {                       //cambiar a body
-      return res.status(500).send("No params");
+    if (!req.body) {                       //cambiar a body
+      return res.status(500).send("No hay parametros en el body");
     }
   
-    const { email, password } = req.query as {
+    const { email, password } = req.body as {
       email: string;
       password: string;
     };
   
     if (!email || !password ) {
-      return res.status(500).send("Faltan el usuario o la contrasena"); 
+      return res.status(500).send("Faltan el usuario o la contraseña"); 
     } else {
       next();
     }
