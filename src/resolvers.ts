@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
 import { Db } from "mongodb";
 import { v4 as uuid } from "uuid";
+const crypto = require("crypto")
+
+
+
 
 const checkDateValidity = (
   day: string,
@@ -31,6 +35,32 @@ const checkDateFuture = ( //filtro para comparar fechas futuras
     }
   return false;
 };
+
+
+
+const hash = async (password:string) => {
+  return new Promise((resolve, reject) => {
+      const salt:string = crypto.randomBytes(8).toString("hex")
+
+      crypto.scrypt(password, salt, 64, (err:any, derivedKey:any) => {
+          if (err) reject(err);
+          resolve(salt + ":" + derivedKey.toString("hex"))
+      });
+  }).catch(e =>{console.error("error");}
+  )
+}
+
+const verify = async (password:string, hash:string) => {
+  return new Promise((resolve, reject) => {
+      const [salt, key] = hash.split(":")
+      crypto.scrypt(password, salt, 64, (err:any, derivedKey:any) => {
+          if (err) reject(err);
+          resolve(key == derivedKey.toString("hex"))
+      });
+  }).catch(e =>{console.error(e);}
+  )
+}
+
 
 export const status = async (req: Request, res: Response) => {
   const date = new Date();
@@ -182,9 +212,20 @@ export const signin = async (req: Request, res: Response) => {
     if (existe) { 
         return res.status(409).send("Ya existe un usuario con este email.");
     }
-  
+    const password1 = await hash(password);
+
+  console.log("\n \n");
+  console.log(password1);
+  console.log("\n \n");
+
+
     const token = uuid();
-    await collection.insertOne({ email, password, token });
+
+    
+    // const crypto = require("crypto")
+
+ 
+    await collection.insertOne({ email, password:password1, token });
   
     console.log(`Bienvenido usuario, tu token de sesion es: ${token}`);
     return res.status(200).json({ token }); 
@@ -210,22 +251,48 @@ export const signin = async (req: Request, res: Response) => {
 
   
 
-  export const login = async (req: Request, res: Response) => {
+  export const login = async (req: Request, res: Response) => { 
     const db: Db = req.app.get("db");
     const collection = db.collection("usuarios");
-
+   
     const { email, password } = req.body as {
       email: string;
       password: string;
     };
-  
+
+    const crypto = require("crypto")
+
+
+    const usu = await collection.findOne({ email });
+    if(usu){console.log("usuario EXISTE");
+      const logged= usu!.token;
+      console.log(logged);
+      if (logged != null) {
+        console.log("usuario ya logeado");
+        return res.status(401).send("usuario ya logeado");
+      };
+    }
+    const passwordDB:string = usu!.password;
+    // console.log("password:");
+    // console.log(passwordDB);
+
+
+    //no he guardado el hash
+    //https://dev.to/farnabaz/hash-your-passwords-with-scrypt-using-nodejs-crypto-module-316k
+
+    const verificado = await verify(password, passwordDB);
+    //const existe = await collection.findOne({ email,password1 });
+        
+        
+    //console.log("password1 == password2", password == password1);   
+   
    
   
     const token = uuid();
-    const existe = await collection.findOne({ email, password });
+    //const existe = await collection.findOne({ email, password });
     
-    if (existe) { 
-      await collection.updateOne({ email, password }, {$set: { token: token } });
+    if (verificado) { 
+      await collection.updateOne({ email }, {$set: { token: token } });
       console.log(`Bienvenido usuario, tu token de sesion es: ${token}`);
      return res.status(200).json({ token });
     }
